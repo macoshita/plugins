@@ -50,7 +50,7 @@ class _WebViewExampleState extends State<WebViewExample> {
       // to allow calling Scaffold.of(context) so we can show a snackbar.
       body: Builder(builder: (BuildContext context) {
         return WebView(
-          initialUrl: 'https://flutter.dev',
+          initialUrl: 'https://maps.google.com',
           javascriptMode: JavascriptMode.unrestricted,
           onWebViewCreated: (WebViewController webViewController) {
             _controller.complete(webViewController);
@@ -183,12 +183,12 @@ class SampleMenu extends StatelessWidget {
               child: Text('List cache'),
             ),
             const PopupMenuItem<MenuOptions>(
-              value: MenuOptions.clearCache,
-              child: Text('Clear cache'),
-            ),
-            const PopupMenuItem<MenuOptions>(
               value: MenuOptions.navigationDelegate,
               child: Text('Navigation Delegate example'),
+            ),
+            const PopupMenuItem<MenuOptions>(
+              value: MenuOptions.clearCache,
+              child: Text('Fix Freeze'),
             ),
           ],
         );

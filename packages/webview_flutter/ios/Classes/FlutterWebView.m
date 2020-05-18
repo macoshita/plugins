@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#import <UIKit/UIGestureRecognizerSubclass.h>
 #import "FlutterWebView.h"
 #import "FLTWKNavigationDelegate.h"
 #import "JavaScriptChannelHandler.h"
@@ -56,6 +57,11 @@
 
 @end
 
+@interface FLTWebViewController()
+- (void)setDelayForwardGestureRecognizers:(UIView *)view;
+- (void)fixFreeze:(FlutterResult)result;
+@end
+
 @implementation FLTWebViewController {
   FLTWKWebView* _webView;
   int64_t _viewId;
@@ -64,6 +70,8 @@
   // The set of registered JavaScript channel names.
   NSMutableSet* _javaScriptChannelNames;
   FLTWKNavigationDelegate* _navigationDelegate;
+  UIGestureRecognizer *_delayingGestureRecognizer;
+  UIGestureRecognizer *_forwardingGestureRecognizer;
 }
 
 - (instancetype)initWithFrame:(CGRect)frame
@@ -147,7 +155,7 @@
   } else if ([[call method] isEqualToString:@"removeJavascriptChannels"]) {
     [self onRemoveJavaScriptChannels:call result:result];
   } else if ([[call method] isEqualToString:@"clearCache"]) {
-    [self clearCache:result];
+    [self fixFreeze:result];
   } else if ([[call method] isEqualToString:@"getTitle"]) {
     [self onGetTitle:result];
   } else if ([[call method] isEqualToString:@"scrollTo"]) {
@@ -161,6 +169,36 @@
   } else {
     result(FlutterMethodNotImplemented);
   }
+}
+
+- (void)setDelayForwardGestureRecognizers:(UIView *)view {
+    for (UIGestureRecognizer *recognizer in [view gestureRecognizers]) {
+        NSLog(@"recognizer: %@", NSStringFromClass(recognizer.class));
+        if (_delayingGestureRecognizer == nil && [NSStringFromClass(recognizer.class) isEqualToString:@"DelayingGestureRecognizer"]) {
+            _delayingGestureRecognizer = recognizer;
+        }
+        if (_forwardingGestureRecognizer == nil && [NSStringFromClass(recognizer.class) isEqualToString:@"ForwardingGestureRecognizer"]) {
+            _forwardingGestureRecognizer = recognizer;
+        }
+    }
+    for (UIView *subview in view.subviews) {
+        [self setDelayForwardGestureRecognizers:subview];
+    }
+}
+
+- (void)fixFreeze:(FlutterResult)result {
+    for (UIWindow *window in UIApplication.sharedApplication.windows) {
+        [self setDelayForwardGestureRecognizers:window];
+    }
+    
+    if (_delayingGestureRecognizer != nil && _forwardingGestureRecognizer != nil) {
+        NSLog(@"recognizer delay_state: %ld, forward_state: %ld", _delayingGestureRecognizer.state, _forwardingGestureRecognizer.state);
+        
+        if (_forwardingGestureRecognizer.state != _delayingGestureRecognizer.state) {
+            _forwardingGestureRecognizer.state = _delayingGestureRecognizer.state;
+        }
+    }
+    result(nil);
 }
 
 - (void)onUpdateSettings:(FlutterMethodCall*)call result:(FlutterResult)result {
